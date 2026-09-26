@@ -1,0 +1,43 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.etchv-labs/mcp-server",
+  "title": "Etchv",
+  "description": "Invisible watermarking and watermark detection for images, PDFs and videos with Etchv.",
+  "websiteUrl": "https://etchv.com/docs/mcp",
+  "repository": {
+    "url": "https://github.com/etchv-labs/mcp-server",
+    "source": "github"
+  },
+  "version": "1.0.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@etchv-labs/mcp-server",
+      "version": "1.0.1",
+      "runtimeHint": "npx",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "ETCHV_API_KEY",
+          "description": "Etchv API key with the scopes your workflow needs.",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "ETCHV_FILES_ROOT",
+          "description": "Absolute path of an existing directory for input and output files.",
+          "isRequired": true,
+          "format": "filepath"
+        },
+        {
+          "name": "ETCHV_API_BASE_URL",
+          "description": "Optional HTTPS API origin. Defaults to https://api.etchv.com.",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

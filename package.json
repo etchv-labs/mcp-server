@@ -1,0 +1,67 @@
+{
+  "name": "@etchv-labs/mcp-server",
+  "version": "1.0.1",
+  "description": "Model Context Protocol (MCP) server for Etchv: invisible watermarking and detection for images, PDFs and videos",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "etchv",
+    "watermark",
+    "watermarking",
+    "invisible-watermark",
+    "watermark-detection",
+    "image",
+    "pdf",
+    "video",
+    "ai-agents",
+    "claude"
+  ],
+  "homepage": "https://etchv.com/docs/mcp",
+  "bugs": {
+    "url": "https://github.com/etchv-labs/mcp-server/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/etchv-labs/mcp-server.git"
+  },
+  "license": "MIT",
+  "author": "Etchv Labs",
+  "mcpName": "io.github.etchv-labs/mcp-server",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "etchv-mcp": "dist/cli.js"
+  },
+  "files": [
+    "dist/**/*.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "start": "node src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test test/*.test.ts",
+    "test:live": "npm run build && node --test test/live.integration.ts",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
+    "lint": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.1.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.1.0",
+    "@types/node": "24.13.4",
+    "prettier": "3.9.9",
+    "typescript": "7.0.2"
+  }
+}
