@@ -17,7 +17,7 @@ test("bounded inputs, partial download cleanup and private exclusive output file
   const file = await open(join(root, "large.jpg"), "w");
   await file.truncate(MAX_UPLOAD + 1);
   await file.close();
-  await assert.rejects(files.read("large.jpg"), /20 MiB/);
+  await assert.rejects(files.read("large.jpg"), /50 MiB/);
   await assert.rejects(files.read(root));
   const output = await files.reserve("partial.jpg");
   await assert.rejects(files.reserve("partial.jpg"), { code: "EEXIST" });

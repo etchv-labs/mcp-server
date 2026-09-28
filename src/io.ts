@@ -3,7 +3,8 @@ import { open, realpath, lstat, unlink } from "node:fs/promises";
 import { resolve, relative, isAbsolute, basename, sep } from "node:path";
 import { createHash } from "node:crypto";
 
-export const MAX_UPLOAD = 20 * 1024 * 1024;
+// The API's largest input (images); PDFs and videos are limited to 20 MiB there.
+export const MAX_UPLOAD = 50 * 1024 * 1024;
 export const MAX_DOWNLOAD = 512 * 1024 * 1024;
 export class SafeError extends Error {}
 
@@ -58,7 +59,7 @@ export async function fileAccess(configuredRoot: string | undefined) {
         const stat = await file.stat();
         if (!stat.isFile() || !stat.size || stat.size > MAX_UPLOAD)
           throw new SafeError(
-            "Upload must be a regular file between 1 byte and 20 MiB.",
+            "Upload must be a regular file between 1 byte and 50 MiB.",
           );
         const bytes = Buffer.alloc(MAX_UPLOAD + 1);
         let size = 0;
@@ -72,7 +73,7 @@ export async function fileAccess(configuredRoot: string | undefined) {
           size += bytesRead;
         }
         if (size > MAX_UPLOAD || !size)
-          throw new SafeError("Upload must be between 1 byte and 20 MiB.");
+          throw new SafeError("Upload must be between 1 byte and 50 MiB.");
         return { bytes: bytes.subarray(0, size), filename: basename(full) };
       } finally {
         await file.close();

@@ -6,7 +6,7 @@ that lets AI assistants watermark and detect images, PDFs and videos with
 
 ## Requirements
 
-- Node.js 24 or later
+- Node.js 26.10.0 or later in the 26.x series
 - An Etchv API key with only the [scopes](#tools) you need
 - An existing directory for input and output files
 
@@ -66,8 +66,9 @@ Then ask the assistant to run `check_api_key` to confirm the connection.
 | `redeliver_webhook` | Resend an existing event | `webhooks:write`, owner/admin |
 
 Submissions require a stable `idempotency_key`; reuse it when retrying so you
-are not charged twice. Uploads are limited to 20 MiB. Storage destinations and
-webhook endpoints are created in the dashboard, not through this server.
+are not charged twice. Image uploads are limited to 50 MiB and PDF and video
+uploads to 20 MiB. Storage destinations and webhook endpoints are created in the
+dashboard, not through this server.
 
 ## Security
 
