@@ -6,7 +6,7 @@ that lets AI assistants watermark and detect images, PDFs and videos with
 
 ## Requirements
 
-- Node.js 26.10.0 or later in the 26.x series
+- Node.js 24 or later
 - An Etchv API key with only the [scopes](#tools) you need
 - An existing directory for input and output files
 
