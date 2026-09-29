@@ -630,6 +630,11 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
         assert.equal(value.request_id, req);
         assert.equal(requests.length, before + 1);
         assert(!JSON.stringify(value).includes(secret));
+        if (code === 429)
+          assert.match(
+            JSON.stringify(value),
+            /upgrade at https:\/\/etchv\.com\/dashboard\/billing/,
+          );
       }
       responseStatus = 200;
     },

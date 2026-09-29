@@ -74,8 +74,9 @@ dashboard, not through this server.
 the default, or `gpu`). GPU processing requires a Business or Enterprise plan
 and costs 3× credits; if no GPU is ready, the job runs on CPU at normal credits.
 Results report the hardware actually used as `accelerator`, and `get_job` also
-returns `accelerator_requested`. When a rate limit is reached, errors include
-`retry_after_seconds`.
+returns `accelerator_requested`. When a rate or concurrency limit is reached,
+errors include `retry_after_seconds` and point to the plan upgrade page. Trial and
+Launch plans run one operation at a time.
 
 ## Security
 

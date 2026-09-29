@@ -12,7 +12,7 @@ const messages: Record<number, string> = {
   413: "The upload exceeds API limits.",
   415: "Media format or encoding is unsupported.",
   422: "The API rejected the file or request fields. Check the format limits in the documentation.",
-  429: "Rate limit reached. Retry after the indicated delay.",
+  429: "Plan rate or concurrency limit reached. Retry after the indicated delay, or upgrade at https://etchv.com/dashboard/billing to run more operations at once.",
 };
 export class ApiError extends SafeError {
   status: number;
