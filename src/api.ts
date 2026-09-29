@@ -18,10 +18,12 @@ export class ApiError extends SafeError {
   status: number;
   request_id?: string;
   retry_after_seconds?: number;
-  constructor(response: Response) {
+  constructor(response: Response, gpuRequested = false) {
     super(
-      messages[response.status] ||
-        `Etchv request failed (HTTP ${response.status}).`,
+      response.status === 403 && gpuRequested
+        ? `${messages[403]} GPU processing requires Business or a higher plan.`
+        : messages[response.status] ||
+            `Etchv request failed (HTTP ${response.status}).`,
     );
     this.status = response.status;
     const id = response.headers.get("x-request-id");
@@ -123,7 +125,10 @@ export function apiClient({
       timer.unref();
       if (!response.ok) {
         await response.body?.cancel();
-        throw new ApiError(response);
+        throw new ApiError(
+          response,
+          url.searchParams.get("accelerator") === "gpu",
+        );
       }
       return response;
     },

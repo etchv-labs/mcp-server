@@ -70,6 +70,13 @@ are not charged twice. Image uploads are limited to 50 MiB and PDF and video
 uploads to 20 MiB. Storage destinations and webhook endpoints are created in the
 dashboard, not through this server.
 
+`watermark_media` and `detect_media` accept an optional `accelerator` (`cpu`,
+the default, or `gpu`). GPU processing requires a Business or Enterprise plan
+and costs 3× credits; if no GPU is ready, the job runs on CPU at normal credits.
+Results report the hardware actually used as `accelerator`, and `get_job` also
+returns `accelerator_requested`. When a rate limit is reached, errors include
+`retry_after_seconds`.
+
 ## Security
 
 - The API key is read only from `ETCHV_API_KEY`, sent only to the configured

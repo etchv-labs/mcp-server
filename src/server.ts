@@ -35,6 +35,7 @@ export const CAPABILITIES = {
     "PDF processing preserves selectable text and vectors. Video requires supported H.264 encoding; audio is preserved, not watermarked.",
     "Format availability depends on the organization plan. API media limits and validation still apply.",
     "Watermarking costs one credit per image/PDF file or per started video minute. Detection also uses API credits.",
+    'Optional accelerator "gpu" (Business and Enterprise plans) costs 3x credits. If no GPU is ready, the job runs on CPU at normal credits; results report the accelerator actually used.',
     "A watermark stores the SHA-256 digest of your JSON, not the original JSON. Detection is a signal, not proof of who shared content.",
     "Use a stable idempotency_key for each logical submission. Reuse it after timeouts. Never change payload with the same key.",
     "Sync may return HTTP 202 when its wait expires. Use get_job and get_job_result. MCP does not wait indefinitely.",
@@ -82,6 +83,12 @@ const submission = {
     .regex(/^[\x21-\x7e]+$/)
     .describe("Unique stable key for this logical operation. Reuse on retry."),
   webhook_id: webhookId.optional(),
+  accelerator: z
+    .enum(["cpu", "gpu"])
+    .optional()
+    .describe(
+      "Processing hardware. Omit for CPU. gpu requires a Business or Enterprise plan and costs 3x credits; it falls back to CPU at normal credits when no GPU is ready.",
+    ),
 };
 const extensions = {
   images: [
@@ -103,6 +110,11 @@ const extensions = {
 };
 const jobPath = (a: { operation: "embed" | "detect"; request_id: string }) =>
   `/watermarks/${a.operation === "detect" ? "detection-jobs" : "jobs"}/${a.request_id}`;
+/** The accelerator the API actually used, when it reports a known value. */
+const acceleratorUsed = (response: Response) => {
+  const value = response.headers.get("x-etchv-accelerator")?.toLowerCase();
+  return value === "cpu" || value === "gpu" ? { accelerator: value } : {};
+};
 const result = (data: Record<string, unknown>, isError = false) => ({
   content: [{ type: "text" as const, text: JSON.stringify(data) }],
   structuredContent: data,
@@ -200,6 +212,7 @@ export async function createServer(config: ApiConfig & { filesRoot?: string }) {
         response.headers.get("content-type")?.includes("application/json")
       ) {
         return {
+          ...acceleratorUsed(response),
           ...(await jsonResponse(response)),
           http_status: response.status,
         };
@@ -222,6 +235,7 @@ export async function createServer(config: ApiConfig & { filesRoot?: string }) {
       return {
         ...(await target.save(response)),
         ...metadata,
+        ...acceleratorUsed(response),
         http_status: response.status,
       };
     } finally {
@@ -278,6 +292,7 @@ export async function createServer(config: ApiConfig & { filesRoot?: string }) {
         webhook_id: a.webhook_id,
         storage_destination_id: a.storage_destination_id,
         storage_key: a.storage_key,
+        accelerator: a.accelerator,
       },
     };
     const value = await fileResult(route, options, a.output_path, ctx);
@@ -292,7 +307,7 @@ export async function createServer(config: ApiConfig & { filesRoot?: string }) {
   );
   tool(
     "watermark_media",
-    "Watermark an image, PDF or video in its original format. Spends credits. Supports sync and async (default); sync can return a 202 job. Scope: watermarks:embed.",
+    "Watermark an image, PDF or video in its original format. Spends credits. Supports sync and async (default); sync can return a 202 job. Optional accelerator gpu (Business and Enterprise) costs 3x credits; results report the accelerator used. Scope: watermarks:embed.",
     {
       ...submission,
       data: object,
@@ -305,7 +320,7 @@ export async function createServer(config: ApiConfig & { filesRoot?: string }) {
   );
   tool(
     "detect_media",
-    "Detect a watermark in an image, PDF or video. Uses API credits. Supports sync and async (default). Returns detection JSON or a job receipt. Scope: watermarks:detect.",
+    "Detect a watermark in an image, PDF or video. Uses API credits. Supports sync and async (default). Returns detection JSON or a job receipt. Optional accelerator gpu (Business and Enterprise) costs 3x credits; results report the accelerator used. Scope: watermarks:detect.",
     submission,
     (a, c) => submit(a, true, c),
     { idempotent: true },
@@ -313,7 +328,7 @@ export async function createServer(config: ApiConfig & { filesRoot?: string }) {
   const job = { request_id: requestId, operation: z.enum(["embed", "detect"]) };
   tool(
     "get_job",
-    "Read job state without waiting. Use the operation from the original submission. Requires the matching watermarks:embed or watermarks:detect scope.",
+    "Read job state without waiting, including accelerator_requested and the accelerator used. Use the operation from the original submission. Requires the matching watermarks:embed or watermarks:detect scope.",
     job,
     (a, c) => json(jobPath(a), {}, c),
     { read: true },

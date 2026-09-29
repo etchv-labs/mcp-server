@@ -33,7 +33,8 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
     json?: Record<string, unknown>;
   }[] = [];
   let responseStatus = 200,
-    pending = false;
+    pending = false,
+    acceleratorHeader: string | undefined;
   const bytes = Buffer.from("preserved native file bytes");
   const http = createServer(async (incoming, response) => {
     try {
@@ -59,6 +60,9 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
       } else if (body.length) record.json = JSON.parse(body.toString());
       requests.push(record);
       response.setHeader("x-request-id", req);
+      const accelerator =
+        url.searchParams.get("accelerator") ?? acceleratorHeader;
+      if (accelerator) response.setHeader("x-etchv-accelerator", accelerator);
       if (responseStatus !== 200) {
         response.writeHead(responseStatus, {
           "content-type": "application/json",
@@ -97,6 +101,18 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
       ) {
         response.writeHead(202, { "content-type": "application/json" });
         response.end(JSON.stringify(receipt));
+        return;
+      }
+      if (/^\/watermarks\/(detection-)?jobs\/req_[a-f0-9]{64}$/.test(route)) {
+        response.setHeader("content-type", "application/json");
+        response.end(
+          JSON.stringify({
+            ...receipt,
+            status: "succeeded",
+            accelerator_requested: "gpu",
+            accelerator: "cpu",
+          }),
+        );
         return;
       }
       if (
@@ -360,6 +376,126 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
         );
       }
       assert.deepEqual(await readFile(join(root, "eventual.pdf")), bytes);
+    },
+  );
+  await t.test(
+    "forwards the accelerator and reports the one actually used",
+    async () => {
+      await writeFile(join(root, "input.mp4"), bytes);
+      for (const [tool, extra] of [
+        ["watermark_media", { data: { id: 1 }, output_path: "gpu.png" }],
+        ["detect_media", {}],
+      ] as const) {
+        const value = await call(client, tool, {
+          media: "images",
+          input_path: "input.png",
+          mode: "sync",
+          idempotency_key: `gpu-${tool}`,
+          accelerator: "gpu",
+          ...extra,
+        });
+        assert.equal(requests.at(-1)!.query.get("accelerator"), "gpu");
+        assert.equal(value.accelerator, "gpu");
+      }
+      for (const detect of [false, true]) {
+        await call(client, detect ? "detect_media" : "watermark_media", {
+          media: "videos",
+          input_path: "input.mp4",
+          idempotency_key: `gpu-async-${detect}`,
+          accelerator: "gpu",
+          webhook_id: wh,
+          storage_destination_id: detect ? undefined : dst,
+          ...(detect ? {} : { data: { id: 1 } }),
+        });
+        const record = requests.at(-1)!;
+        assert.equal(
+          record.path,
+          `/watermarks/videos${detect ? "/detect" : ""}/async`,
+        );
+        assert.equal(record.query.get("accelerator"), "gpu");
+        assert.equal(record.query.get("webhook_id"), wh);
+        if (!detect)
+          assert.equal(record.query.get("storage_destination_id"), dst);
+      }
+      await call(client, "watermark_media", {
+        media: "images",
+        input_path: "input.png",
+        idempotency_key: "cpu-default",
+        data: { id: 1 },
+      });
+      assert.equal(requests.at(-1)!.query.has("accelerator"), false);
+      const job = await call(client, "get_job", {
+        operation: "embed",
+        request_id: req,
+      });
+      assert.equal(job.accelerator_requested, "gpu");
+      assert.equal(job.accelerator, "cpu");
+      acceleratorHeader = "cpu";
+      try {
+        const embedded = await call(client, "get_job_result", {
+          operation: "embed",
+          request_id: req,
+          output_path: "gpu-fallback.png",
+        });
+        assert.equal(embedded.accelerator, "cpu");
+        const detected = await call(client, "get_job_result", {
+          operation: "detect",
+          request_id: req,
+        });
+        assert.equal(detected.accelerator, "cpu");
+        acceleratorHeader = "tpu";
+        const unknown = await call(client, "get_job_result", {
+          operation: "detect",
+          request_id: req,
+        });
+        assert.equal(unknown.accelerator, undefined);
+      } finally {
+        acceleratorHeader = undefined;
+      }
+      responseStatus = 403;
+      try {
+        const denied = await call(
+          client,
+          "detect_media",
+          {
+            media: "images",
+            input_path: "input.png",
+            mode: "sync",
+            idempotency_key: "gpu-denied",
+            accelerator: "gpu",
+          },
+          true,
+        );
+        assert.equal(denied.http_status, 403);
+        assert.match(
+          String(denied.error),
+          /GPU processing requires Business or a higher plan/,
+        );
+        const cpuDenied = await call(
+          client,
+          "detect_media",
+          {
+            media: "images",
+            input_path: "input.png",
+            mode: "sync",
+            idempotency_key: "cpu-denied",
+          },
+          true,
+        );
+        assert.doesNotMatch(String(cpuDenied.error), /GPU/);
+      } finally {
+        responseStatus = 200;
+      }
+      const invalid = await client.callTool({
+        name: "detect_media",
+        arguments: {
+          media: "images",
+          input_path: "input.png",
+          idempotency_key: "bad-accelerator",
+          accelerator: "tpu",
+        },
+      });
+      assert.equal(invalid.isError, true);
     },
   );
   await t.test(
