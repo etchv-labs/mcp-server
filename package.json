@@ -30,7 +30,7 @@
   "mcpName": "io.github.etchv-labs/mcp-server",
   "type": "module",
   "engines": {
-    "node": "24.x"
+    "node": ">=24"
   },
   "bin": {
     "etchv-mcp": "dist/cli.js"
