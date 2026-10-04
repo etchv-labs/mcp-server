@@ -34,7 +34,7 @@ export const CAPABILITIES = {
     "Original formats are preserved, including supported image animation, TIFF pages and PSD/PSB layers.",
     "PDF processing preserves selectable text and vectors. Video requires supported H.264 encoding; audio is preserved, not watermarked.",
     "Format availability depends on the organization plan. API media limits and validation still apply.",
-    "Watermarking costs one credit per image/PDF file or per started video minute. Detection also uses API credits.",
+    "Watermarking costs one credit per image, per PDF page or per started 24 video frames. Detection costs one credit per file.",
     'Optional accelerator "gpu" (Business and Enterprise plans) costs 3x credits. If no GPU is ready, the job runs on CPU at normal credits; results report the accelerator actually used.',
     "A watermark stores the SHA-256 digest of your JSON, not the original JSON. Detection is a signal, not proof of who shared content.",
     "Use a stable idempotency_key for each logical submission. Reuse it after timeouts. Never change payload with the same key.",
