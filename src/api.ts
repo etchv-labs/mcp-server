@@ -28,12 +28,11 @@ export class ApiError extends SafeError {
     this.status = response.status;
     const id = response.headers.get("x-request-id");
     this.request_id = /^req_[a-f0-9]{64}$/.test(id ?? "") ? id! : undefined;
-    const retry = response.headers.get("retry-after");
-    this.retry_after_seconds = /^\d{1,6}$/.test(retry ?? "")
-      ? Number(retry)
-      : undefined;
+    this.retry_after_seconds = retryAfter(response);
   }
 }
+/** Slowest upload rate a signed PUT is given time for, in bytes per second. */
+export const UPLOAD_FLOOR = 128 * 1024;
 export interface ApiConfig {
   apiKey?: string;
   baseUrl?: string;
@@ -150,11 +149,24 @@ export function apiClient({
           signal,
         }),
       );
-      const upload = session.upload as
-        { method?: unknown; url?: unknown } | undefined;
+      if (!/^upl_[a-f0-9]{32}$/.test(String(session.upload_id)))
+        throw new SafeError("API returned an invalid upload session.");
+      await this.put(session.upload, bytes, signal);
+      return String(session.upload_id);
+    },
+    /**
+     * PUT bytes to a signed upload URL from the API (an upload session or a
+     * batch item). Only the signature in the URL authorizes it: the API key is
+     * never sent there.
+     */
+    async put(upload: unknown, bytes: Uint8Array, signal?: AbortSignal) {
+      const { method, url } = (upload ?? {}) as {
+        method?: unknown;
+        url?: unknown;
+      };
       let target: URL;
       try {
-        target = new URL(String(upload?.url));
+        target = new URL(String(url));
       } catch {
         throw new SafeError("API returned an invalid upload session.");
       }
@@ -163,11 +175,16 @@ export function apiClient({
         target.protocol === "http:" &&
         ["localhost", "127.0.0.1", "[::1]"].includes(target.hostname);
       if (
-        upload?.method !== "PUT" ||
-        !/^upl_[a-f0-9]{32}$/.test(String(session.upload_id)) ||
+        method !== "PUT" ||
+        target.username ||
+        target.password ||
         (target.protocol !== "https:" && !local)
       )
         throw new SafeError("API returned an invalid upload session.");
+      // Each attempt gets the request deadline plus time for the body at a
+      // floor of 128 KiB/s, so a stalled upload cannot hang the call.
+      const deadline =
+        timeout + Math.ceil((bytes.length / UPLOAD_FLOOR) * 1000);
       for (let attempt = 0; ; attempt++) {
         let response: Response;
         try {
@@ -179,14 +196,22 @@ export function apiClient({
               "User-Agent": USER_AGENT,
             },
             redirect: "manual",
-            signal,
+            signal: AbortSignal.any([
+              AbortSignal.timeout(deadline),
+              ...(signal ? [signal] : []),
+            ]),
           });
         } catch (error) {
-          if (attempt < 2 && !signal?.aborted) continue;
+          if (signal?.aborted) throw error;
+          if (attempt < 2) continue;
+          if (error instanceof Error && error.name === "TimeoutError")
+            throw new SafeError(
+              "The file upload timed out. Check the network connection.",
+            );
           throw error;
         }
         await response.body?.cancel();
-        if (response.status === 200) return String(session.upload_id);
+        if (response.status === 200) return;
         if (response.status >= 500 && attempt < 2) continue;
         throw new SafeError(
           response.status === 413
@@ -196,6 +221,11 @@ export function apiClient({
       }
     },
   };
+}
+/** Seconds from a Retry-After header, when it holds a plain number. */
+export function retryAfter(response: Response): number | undefined {
+  const value = response.headers.get("retry-after");
+  return /^\d{1,6}$/.test(value ?? "") ? Number(value) : undefined;
 }
 export async function jsonResponse(
   response: Response,

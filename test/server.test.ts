@@ -180,7 +180,7 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
       assert.equal(client.getServerVersion()?.name, "etchv");
       assert.equal(client.getServerVersion()?.version, VERSION);
       const { tools } = await client.listTools();
-      assert.equal(tools.length, 19);
+      assert.equal(tools.length, 22);
       for (const tool of tools) {
         assert(tool.description && tool.description.length > 20, tool.name);
         assert.equal(tool.inputSchema.type, "object", tool.name);
@@ -197,6 +197,7 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
         [
           "check_api_key",
           "get_asset",
+          "get_batch",
           "get_job",
           "list_assets",
           "list_storage_deliveries",
@@ -230,6 +231,16 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
       );
       assert.equal(
         tools.find((x) => x.name === "download_asset")?.annotations
+          ?.readOnlyHint,
+        false,
+      );
+      assert.equal(
+        tools.find((x) => x.name === "watermark_batch")?.annotations
+          ?.idempotentHint,
+        true,
+      );
+      assert.equal(
+        tools.find((x) => x.name === "download_batch")?.annotations
           ?.readOnlyHint,
         false,
       );

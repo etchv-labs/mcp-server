@@ -58,6 +58,8 @@ Then ask the assistant to run `check_api_key` to confirm the connection.
 | `watermark_media` | Watermark a local file, sync or async; spends credits | `watermarks:embed` |
 | `detect_media` | Detect a watermark, sync or async; uses credits | `watermarks:detect` |
 | `get_job`, `get_job_result` | Read job status; collect a finished result | Matching embed/detect scope |
+| `watermark_batch` | Watermark up to 100 local files in one batch, each with its own data; spends credits | `watermarks:embed` |
+| `get_batch`, `download_batch` | Follow a batch; save each result or the batch's zip | `watermarks:embed` |
 | `list_assets`, `get_asset`, `download_asset` | List, inspect and download assets | `assets:read` |
 | `update_asset` | Rename or replace metadata (version-checked) | `assets:write` |
 | `delete_asset` | Delete an asset | `assets:delete`, owner/admin |
@@ -81,6 +83,24 @@ Results report the hardware actually used as `accelerator`, and `get_job` also
 returns `accelerator_requested`. When a rate or concurrency limit is reached,
 errors include `retry_after_seconds` and point to the plan upgrade page. Trial and
 Launch plans run one operation at a time.
+
+### Batches
+
+`watermark_batch` takes up to 100 files, named one of three ways: `input_paths`,
+`input_dir` with an optional `glob` (for example `"contracts/*.pdf"`; braces and `..` are refused), or
+`items` with their own `data`. A `data_template` fills in each file's data;
+string values may use `{filename}`, `{stem}` and `{index}` (the file's 0-based
+position). The server creates the batch, uploads each file once to its signed
+URL without the API key, and starts it. With `wait: true` it polls at the pace
+the API asks for, for up to `wait_seconds` (default 600), sending progress
+notifications when the client asks for them, and with `output_dir` saves the
+results. Otherwise call `get_batch`, then `download_batch`, which saves each
+successful file under its name in the batch zip (`NNN-<name>-watermarked.<ext>`), or the single zip when the
+batch was created with `archive: true`, and lists failed items with their error
+codes. Each file costs the same credits as a single request, and files that
+fail are refunded. Retrying with the same arguments resumes or returns the
+same batch; if that batch expired unstarted or its results have expired, the
+tool asks for a new `idempotency_key`.
 
 ## Security
 
