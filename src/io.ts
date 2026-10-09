@@ -5,6 +5,8 @@ import { createHash } from "node:crypto";
 
 // The API's largest input (images); PDFs and videos are limited to 20 MiB there.
 export const MAX_UPLOAD = 50 * 1024 * 1024;
+/** Detection takes delivered files, up to 192 MiB through an upload session. */
+export const MAX_DETECT_UPLOAD = 192 * 1024 * 1024;
 export const MAX_DOWNLOAD = 512 * 1024 * 1024;
 export class SafeError extends Error {}
 
@@ -49,7 +51,7 @@ export async function fileAccess(configuredRoot: string | undefined) {
     return full;
   }
   return {
-    async read(path: string) {
+    async read(path: string, limit = MAX_UPLOAD) {
       const full = await checked(path);
       const file = await open(
         full,
@@ -57,11 +59,12 @@ export async function fileAccess(configuredRoot: string | undefined) {
       );
       try {
         const stat = await file.stat();
-        if (!stat.isFile() || !stat.size || stat.size > MAX_UPLOAD)
+        const mib = Math.round(limit / 1024 / 1024);
+        if (!stat.isFile() || !stat.size || stat.size > limit)
           throw new SafeError(
-            "Upload must be a regular file between 1 byte and 50 MiB.",
+            `Upload must be a regular file between 1 byte and ${mib} MiB.`,
           );
-        const bytes = Buffer.alloc(MAX_UPLOAD + 1);
+        const bytes = Buffer.alloc(Math.min(limit, stat.size) + 1);
         let size = 0;
         while (size < bytes.length) {
           const { bytesRead } = await file.read(
@@ -72,8 +75,8 @@ export async function fileAccess(configuredRoot: string | undefined) {
           if (!bytesRead) break;
           size += bytesRead;
         }
-        if (size > MAX_UPLOAD || !size)
-          throw new SafeError("Upload must be between 1 byte and 50 MiB.");
+        if (size > limit || size > stat.size || !size)
+          throw new SafeError(`Upload must be between 1 byte and ${mib} MiB.`);
         return { bytes: bytes.subarray(0, size), filename: basename(full) };
       } finally {
         await file.close();

@@ -7,6 +7,7 @@ export async function connect(
   filesRoot: string,
   apiKey: string,
   baseUrl?: string,
+  extraEnv: Record<string, string> = {},
 ) {
   const transport = new StdioClientTransport({
     command: process.execPath,
@@ -16,6 +17,7 @@ export async function connect(
       ETCHV_API_KEY: apiKey,
       ETCHV_FILES_ROOT: filesRoot,
       ...(baseUrl ? { ETCHV_API_BASE_URL: baseUrl } : {}),
+      ...extraEnv,
     },
     stderr: "pipe",
   });

@@ -8,6 +8,7 @@ try {
     apiKey: process.env.ETCHV_API_KEY,
     baseUrl: process.env.ETCHV_API_BASE_URL,
     filesRoot: process.env.ETCHV_FILES_ROOT,
+    largeFileThreshold: process.env.ETCHV_LARGE_FILE_THRESHOLD,
   };
   // Validate before accepting a connection. stdout is reserved for MCP messages.
   const initial = await createServer(config);

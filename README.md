@@ -17,6 +17,7 @@ that lets AI assistants watermark and detect images, PDFs and videos with
 | `ETCHV_API_KEY` | Yes | Etchv API key. Keep it in your client's secret or env config, never in chat. |
 | `ETCHV_FILES_ROOT` | Yes | Absolute path of an existing directory. All input and output files must be inside it. |
 | `ETCHV_API_BASE_URL` | No | API origin. Defaults to `https://api.etchv.com`. |
+| `ETCHV_LARGE_FILE_THRESHOLD` | No | Files above this many bytes are uploaded once to a signed URL and sent by ID. Defaults to 40 MiB. |
 
 ### Claude Code
 
@@ -67,7 +68,10 @@ Then ask the assistant to run `check_api_key` to confirm the connection.
 
 Submissions require a stable `idempotency_key`; reuse it when retrying so you
 are not charged twice. Image uploads are limited to 50 MiB and PDF and video
-uploads to 20 MiB. Storage destinations and webhook endpoints are created in the
+uploads to 20 MiB. Detection takes the files Etchv delivered: up to 192 MiB for
+images, 64 MiB for PDFs and 100 MiB for video. Files over 40 MiB go through an
+upload session automatically, and image or PDF detection above 95 MiB returns a
+job receipt to collect with `get_job_result`. Storage destinations and webhook endpoints are created in the
 dashboard, not through this server.
 
 `watermark_media` and `detect_media` accept an optional `accelerator` (`cpu`,

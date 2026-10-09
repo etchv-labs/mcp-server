@@ -132,6 +132,69 @@ export function apiClient({
       }
       return response;
     },
+    /**
+     * Upload a file once through an upload session and return its upload_id, to
+     * send instead of the file. The signed URL carries its own authorization, so
+     * the API key never goes to it.
+     */
+    async upload(
+      kind: "image" | "document" | "video" | "detect",
+      bytes: Uint8Array,
+      filename: string,
+      signal?: AbortSignal,
+    ): Promise<string> {
+      const session = await jsonResponse(
+        await this.request("/uploads", {
+          method: "POST",
+          body: { kind, filename, size: bytes.length },
+          signal,
+        }),
+      );
+      const upload = session.upload as
+        { method?: unknown; url?: unknown } | undefined;
+      let target: URL;
+      try {
+        target = new URL(String(upload?.url));
+      } catch {
+        throw new SafeError("API returned an invalid upload session.");
+      }
+      const local =
+        base.protocol === "http:" &&
+        target.protocol === "http:" &&
+        ["localhost", "127.0.0.1", "[::1]"].includes(target.hostname);
+      if (
+        upload?.method !== "PUT" ||
+        !/^upl_[a-f0-9]{32}$/.test(String(session.upload_id)) ||
+        (target.protocol !== "https:" && !local)
+      )
+        throw new SafeError("API returned an invalid upload session.");
+      for (let attempt = 0; ; attempt++) {
+        let response: Response;
+        try {
+          response = await fetch(target, {
+            method: "PUT",
+            body: new Blob([bytes as Uint8Array<ArrayBuffer>]),
+            headers: {
+              "Content-Type": "application/octet-stream",
+              "User-Agent": USER_AGENT,
+            },
+            redirect: "manual",
+            signal,
+          });
+        } catch (error) {
+          if (attempt < 2 && !signal?.aborted) continue;
+          throw error;
+        }
+        await response.body?.cancel();
+        if (response.status === 200) return String(session.upload_id);
+        if (response.status >= 500 && attempt < 2) continue;
+        throw new SafeError(
+          response.status === 413
+            ? "The file exceeds the upload limit for this operation."
+            : `The upload was refused (HTTP ${response.status}).`,
+        );
+      }
+    },
   };
 }
 export async function jsonResponse(
