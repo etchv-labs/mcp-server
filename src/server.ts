@@ -58,7 +58,7 @@ export const CAPABILITIES = {
     "Format availability depends on the organization plan. API media limits and validation still apply.",
     "Watermarking costs one credit per image, per PDF page or per started 24 video frames. Detection costs one credit per file.",
     'Optional accelerator "gpu" (Business and Enterprise plans) costs 3x credits. If no GPU is ready, the job runs on CPU at normal credits; results report the accelerator actually used.',
-    "A watermark stores the SHA-256 digest of your JSON, not the original JSON. Detection is a signal, not proof of who shared content.",
+    "Each watermark resolves to a unique forensic ID: the SHA-256 digest of your JSON, not the original JSON. Detection is a signal, not proof of who shared content.",
     "Use a stable idempotency_key for each logical submission. Reuse it after timeouts. Never change payload with the same key.",
     "Sync may return HTTP 202 when its wait expires. Use get_job and get_job_result. MCP does not wait indefinitely.",
     "Etchv storage is included by default. Select a verified destination to store the watermarked result in your own bucket instead.",
