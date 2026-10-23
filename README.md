@@ -69,11 +69,11 @@ Then ask the assistant to run `check_api_key` to confirm the connection.
 | `redeliver_webhook` | Resend an existing event | `webhooks:write`, owner/admin |
 
 Submissions require a stable `idempotency_key`; reuse it when retrying so you
-are not charged twice. Image uploads are limited to 50 MiB and PDF and video
-uploads to 20 MiB. Detection takes the files Etchv delivered: up to 192 MiB for
-images, 64 MiB for PDFs and 100 MiB for video. Files over 40 MiB go through an
-upload session automatically, and image or PDF detection above 95 MiB returns a
-job receipt to collect with `get_job_result`. Storage destinations and webhook endpoints are created in the
+are not charged twice. Image uploads are limited to 50 MiB and document and
+video uploads to 20 MiB. Detection takes the files Etchv delivered: up to 192 MiB
+for images, 64 MiB for PDFs and 100 MiB for DOCX, PPTX and video. Files over
+40 MiB go through an upload session automatically, and image or document
+detection above 95 MiB returns a job receipt to collect with `get_job_result`. Storage destinations and webhook endpoints are created in the
 dashboard, not through this server.
 
 `watermark_media` and `detect_media` accept an optional `accelerator` (`cpu`,

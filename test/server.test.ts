@@ -267,8 +267,8 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
       "ppm",
       "webp",
     ],
-    documents: ["pdf"],
-    videos: ["mp4", "mov"],
+    documents: ["pdf", "docx", "pptx"],
+    videos: ["mp4", "mov", "webm", "mkv", "mpg", "mpeg", "ts", "avi"],
   })) {
     for (const extension of extensions) {
       await writeFile(join(root, `input.${extension}`), bytes);

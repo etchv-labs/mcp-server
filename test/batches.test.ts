@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { call, connect } from "./helpers.ts";
 import {
+  batchLimit,
   fillTemplate,
   isBatchFile,
   outputName,
@@ -536,7 +537,10 @@ test("globs cannot leave input_dir or ETCHV_FILES_ROOT, and outside names never 
       { input_dir: "in", data_template: { a: 1 } },
       true,
     );
-    assert.match(String(value.error), /No images, PDFs/);
+    assert.match(
+      String(value.error),
+      /No images, PDF, DOCX or PPTX documents, or supported videos/,
+    );
     assert.equal(JSON.stringify(value).includes("secret-outside"), false);
     assert.equal(api.seen.length, 0);
   } finally {
@@ -788,4 +792,16 @@ test("a failed check while waiting keeps the batch ID, and a draft is never call
     await session.close();
     api.http.close();
   }
+});
+
+test("batch file types mirror the API's batch kinds", () => {
+  for (const name of ["a.webm", "a.MKV", "a.mpg", "a.mpeg", "a.ts", "a.avi"]) {
+    assert.ok(isBatchFile(name), name);
+    assert.equal(batchLimit(name), 20 * 1024 * 1024);
+  }
+  for (const name of ["a.docx", "a.PPTX"]) {
+    assert.ok(isBatchFile(name), name);
+    assert.equal(batchLimit(name), 20 * 1024 * 1024);
+  }
+  assert.equal(isBatchFile("a.apng"), false);
 });

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.0
+
+- `watermark_media` and `detect_media` take DOCX and PPTX as `documents`, and
+  WebM, Matroska (`.mkv`), MPEG (`.mpg`, `.mpeg`), MPEG transport stream (`.ts`)
+  and AVI as `videos`, besides PDF, MP4 and MOV.
+- `watermark_batch` takes the same new files, including DOCX and PPTX.
+
 ## 1.2.0
 
 - New `watermark_batch` tool: watermark up to 100 local files in one batch,

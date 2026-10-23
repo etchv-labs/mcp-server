@@ -18,8 +18,16 @@ const KINDS: Record<string, "image" | "document" | "video"> = {
   ".ppm": "image",
   ".webp": "image",
   ".pdf": "document",
+  ".docx": "document",
+  ".pptx": "document",
   ".mp4": "video",
   ".mov": "video",
+  ".webm": "video",
+  ".mkv": "video",
+  ".mpg": "video",
+  ".mpeg": "video",
+  ".ts": "video",
+  ".avi": "video",
 };
 const LIMITS = { image: 50 * MIB, document: 20 * MIB, video: 20 * MIB };
 /** States after which a batch makes no further progress. */
@@ -38,7 +46,7 @@ export function batchLimit(path: string) {
   const kind = KINDS[extname(path).toLowerCase()];
   if (!kind)
     throw new SafeError(
-      `${path}: unsupported file type. Batches take images, PDFs and MP4 or MOV videos.`,
+      `${path}: unsupported file type. Batches take images, PDF, DOCX and PPTX documents, and MP4, MOV, WebM, Matroska, MPEG or AVI videos.`,
     );
   return LIMITS[kind];
 }
