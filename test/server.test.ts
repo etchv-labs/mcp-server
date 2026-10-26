@@ -510,6 +510,67 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
     },
   );
   await t.test(
+    "forwards active_content for documents and refuses it for other media",
+    async () => {
+      await writeFile(join(root, "input.pdf"), bytes);
+      await call(client, "watermark_media", {
+        media: "documents",
+        input_path: "input.pdf",
+        idempotency_key: "active-remove",
+        active_content: "remove_auto_run",
+        data: { id: 1 },
+      });
+      assert.equal(requests.at(-1)!.path, "/watermarks/documents/async");
+      assert.equal(
+        requests.at(-1)!.query.get("active_content"),
+        "remove_auto_run",
+      );
+      await call(client, "watermark_media", {
+        media: "documents",
+        input_path: "input.pdf",
+        idempotency_key: "active-default",
+        data: { id: 1 },
+      });
+      assert.equal(requests.at(-1)!.query.has("active_content"), false);
+      const sent = requests.length;
+      const refused = await call(
+        client,
+        "watermark_media",
+        {
+          media: "images",
+          input_path: "input.png",
+          idempotency_key: "active-image",
+          active_content: "keep",
+          data: { id: 1 },
+        },
+        true,
+      );
+      assert.match(String(refused.error), /PDF documents only/);
+      const invalid = await client.callTool({
+        name: "watermark_media",
+        arguments: {
+          media: "documents",
+          input_path: "input.pdf",
+          idempotency_key: "active-invalid",
+          active_content: "strip",
+          data: { id: 1 },
+        },
+      });
+      assert.equal(invalid.isError, true);
+      const detect = await client.callTool({
+        name: "detect_media",
+        arguments: {
+          media: "documents",
+          input_path: "input.pdf",
+          idempotency_key: "active-detect",
+          active_content: "keep",
+        },
+      });
+      assert.equal(detect.isError, true);
+      assert.equal(requests.length, sent);
+    },
+  );
+  await t.test(
     "check_api_key reports key identity without exposing the key",
     async () => {
       const value = await call(client, "check_api_key");

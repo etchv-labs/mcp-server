@@ -30,6 +30,8 @@ const KINDS: Record<string, "image" | "document" | "video"> = {
   ".avi": "video",
 };
 const LIMITS = { image: 50 * MIB, document: 20 * MIB, video: 20 * MIB };
+/** PDFs take 50 MiB, like images; DOCX and PPTX keep the document cap. */
+const PDF_LIMIT = 50 * MIB;
 /** States after which a batch makes no further progress. */
 export const BATCH_DONE = new Set([
   "completed",
@@ -48,7 +50,7 @@ export function batchLimit(path: string) {
     throw new SafeError(
       `${path}: unsupported file type. Batches take images, PDF, DOCX and PPTX documents, and MP4, MOV, WebM, Matroska, MPEG or AVI videos.`,
     );
-  return LIMITS[kind];
+  return extname(path).toLowerCase() === ".pdf" ? PDF_LIMIT : LIMITS[kind];
 }
 
 /** Replace {filename}, {stem} and {index} in every string value. */

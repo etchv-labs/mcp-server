@@ -69,9 +69,11 @@ Then ask the assistant to run `check_api_key` to confirm the connection.
 | `redeliver_webhook` | Resend an existing event | `webhooks:write`, owner/admin |
 
 Submissions require a stable `idempotency_key`; reuse it when retrying so you
-are not charged twice. Image uploads are limited to 50 MiB and document and
-video uploads to 20 MiB. Detection takes the files Etchv delivered: up to 192 MiB
-for images, 64 MiB for PDFs and 100 MiB for DOCX, PPTX and video. Files over
+are not charged twice. Image and PDF uploads are limited to 50 MiB and DOCX,
+PPTX and video uploads to 20 MiB. A PDF has 1 to 2,000 pages, and its
+watermarked copy must fit in 95 MiB with 48 KiB per page, so a 2,000-page PDF
+can be up to about 1 MiB. Detection takes the files Etchv delivered: up to 192 MiB
+for images, 95 MiB for PDFs and 100 MiB for DOCX, PPTX and video. Files over
 40 MiB go through an upload session automatically, and image or document
 detection above 95 MiB returns a job receipt to collect with `get_job_result`. Storage destinations and webhook endpoints are created in the
 dashboard, not through this server.
@@ -80,7 +82,11 @@ dashboard, not through this server.
 the default, or `gpu`). GPU processing requires a Business or Enterprise plan
 and costs 3× credits; if no GPU is ready, the job runs on CPU at normal credits.
 Results report the hardware actually used as `accelerator`, and `get_job` also
-returns `accelerator_requested`. When a rate or concurrency limit is reached,
+returns `accelerator_requested`. `watermark_media` and `watermark_batch` also
+accept `active_content` for PDFs: `keep` (the default) returns scripts and
+actions as uploaded, and `remove_auto_run` removes what a PDF viewer runs by
+itself, such as open actions, document-level JavaScript and XFA forms. In a
+batch, `remove_auto_run` needs every file to be a PDF. When a rate or concurrency limit is reached,
 errors include `retry_after_seconds` and point to the plan upgrade page. Trial and
 Launch plans run one operation at a time.
 

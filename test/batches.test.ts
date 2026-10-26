@@ -794,6 +794,42 @@ test("a failed check while waiting keeps the batch ID, and a draft is never call
   }
 });
 
+test("watermark_batch sends active_content and keeps it out of the key when omitted", async () => {
+  const root = await mkdtemp(join(tmpdir(), "etchv-mcp-batch-"));
+  await writeFile(join(root, "a.pdf"), pdf);
+  const api = await fakeApi(() => ({
+    "POST /watermarks/batches": {
+      batch_id: batchId,
+      status: "draft",
+      items: [item(0, "a.pdf", { upload_received: true })],
+    },
+    [`POST /watermarks/batches/${batchId}/start`]: {
+      batch_id: batchId,
+      status: "starting",
+      items: [item(0, "a.pdf")],
+    },
+  }));
+  const session = await connect(root, secret, api.base);
+  try {
+    const args = { input_paths: ["a.pdf"], data_template: { a: 1 } };
+    await call(session.client, "watermark_batch", {
+      ...args,
+      active_content: "remove_auto_run",
+    });
+    await call(session.client, "watermark_batch", args);
+    const [removed, kept] = api.seen.filter(
+      (record) => record.path === "/watermarks/batches",
+    );
+    assert.equal(removed.json!.active_content, "remove_auto_run");
+    assert.equal("active_content" in kept.json!, false);
+    // The option is part of the derived key, so the two calls name two batches.
+    assert.notEqual(removed.idempotency, kept.idempotency);
+  } finally {
+    await session.close();
+    api.http.close();
+  }
+});
+
 test("batch file types mirror the API's batch kinds", () => {
   for (const name of ["a.webm", "a.MKV", "a.mpg", "a.mpeg", "a.ts", "a.avi"]) {
     assert.ok(isBatchFile(name), name);
@@ -803,5 +839,7 @@ test("batch file types mirror the API's batch kinds", () => {
     assert.ok(isBatchFile(name), name);
     assert.equal(batchLimit(name), 20 * 1024 * 1024);
   }
+  for (const name of ["a.pdf", "a.PDF", "a.png"])
+    assert.equal(batchLimit(name), 50 * 1024 * 1024);
   assert.equal(isBatchFile("a.apng"), false);
 });

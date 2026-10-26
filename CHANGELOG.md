@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.0
+
+- `watermark_media` and `watermark_batch` take `active_content` (`keep`, the
+  default, or `remove_auto_run`) to remove what a PDF viewer runs by itself.
+  Other media are refused before any request; a batch with `remove_auto_run`
+  must contain only PDFs.
+- Batch PDFs may be up to 50 MiB, as the API allows; DOCX and PPTX stay at 20 MiB.
+- The capabilities resource and README state the PDF limits: 1 to 2,000 pages
+  and 50 MiB to embed, 95 MiB for the watermarked copy (48 KiB per page) and
+  95 MiB to detect.
+
 ## 1.3.0
 
 - `watermark_media` and `detect_media` take DOCX and PPTX as `documents`, and

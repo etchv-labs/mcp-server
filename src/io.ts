@@ -3,7 +3,7 @@ import { glob, open, realpath, lstat, unlink } from "node:fs/promises";
 import { resolve, relative, isAbsolute, basename, sep } from "node:path";
 import { createHash } from "node:crypto";
 
-// The API's largest input (images); PDFs and videos are limited to 20 MiB there.
+// The API's largest input (images and PDFs); DOCX, PPTX and videos are limited to 20 MiB there.
 export const MAX_UPLOAD = 50 * 1024 * 1024;
 /** Detection takes delivered files, up to 192 MiB through an upload session. */
 export const MAX_DETECT_UPLOAD = 192 * 1024 * 1024;

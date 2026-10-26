@@ -1,6 +1,6 @@
 {
   "name": "@etchv-labs/mcp-server",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Model Context Protocol (MCP) server for Etchv: invisible watermarking and detection for images, PDFs and videos",
   "keywords": [
     "mcp",
