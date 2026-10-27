@@ -723,10 +723,11 @@ test("a directory listing filters by type while walking and refuses a walk it ca
   }
 });
 
-test("a stalled signed upload times out with a clear message", async () => {
-  let puts = 0;
+test("a stalled signed upload times out with a clear message", async (t) => {
+  // Count the client's attempts: on a busy runner one can time out before
+  // the server sees its request.
+  const fetchSpy = t.mock.method(globalThis, "fetch");
   const http = createServer((incoming) => {
-    puts++;
     incoming.resume(); // Read the body, never answer.
   });
   await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
@@ -737,7 +738,7 @@ test("a stalled signed upload times out with a clear message", async () => {
       api.put({ method: "PUT", url: `${base}/signed/x` }, new Uint8Array(10)),
       /upload timed out/,
     );
-    assert.equal(puts, 3);
+    assert.equal(fetchSpy.mock.callCount(), 3);
   } finally {
     http.closeAllConnections();
     http.close();
