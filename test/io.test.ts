@@ -75,6 +75,45 @@ test("package, server and user-agent versions match", async () => {
     await readFile(new URL("../package.json", import.meta.url), "utf8"),
   );
   assert.equal(pkg.version, VERSION);
+  // The release publishes server.json to the MCP registry, which checks the
+  // npm package's mcpName against the entry's name.
+  const server = JSON.parse(
+    await readFile(new URL("../server.json", import.meta.url), "utf8"),
+  );
+  assert.equal(server.name, pkg.mcpName);
+  assert.equal(server.version, VERSION);
+  assert.deepEqual(
+    server.packages.map((entry: { identifier: string; version: string }) => [
+      entry.identifier,
+      entry.version,
+    ]),
+    [[pkg.name, VERSION]],
+  );
+  // Editor directory manifests install the same package and major version.
+  const manifest = async (path: string) =>
+    JSON.parse(await readFile(new URL(path, import.meta.url), "utf8"));
+  const cursor = await manifest("../.cursor-plugin/plugin.json");
+  const gemini = await manifest("../gemini-extension.json");
+  const cursorServers = (await manifest("../mcp.json")).mcpServers;
+  for (const entry of [cursor, gemini])
+    assert.deepEqual(
+      [entry.version, entry.description],
+      [VERSION, server.description],
+    );
+  const args = ["-y", `${pkg.name}@${VERSION.split(".")[0]}`];
+  assert.deepEqual(cursorServers.etchv.args, args);
+  assert.deepEqual(gemini.mcpServers.etchv.args, args);
+  // Every ${VAR} in mcp.json is declared, and each setting maps to a variable.
+  const declared = Object.keys(cursor.variables.properties).sort();
+  assert.deepEqual(
+    cursorServers.etchv.env,
+    Object.fromEntries(declared.map((name) => [name, "${" + name + "}"])),
+  );
+  assert.deepEqual([...cursor.variables.required].sort(), declared);
+  assert.deepEqual(
+    gemini.settings.map((s: { envVar: string }) => s.envVar).sort(),
+    declared,
+  );
   // A single bin lets `npx @etchv-labs/mcp-server` resolve it unambiguously.
   assert.deepEqual(pkg.bin, { "etchv-mcp": "dist/cli.js" });
 });

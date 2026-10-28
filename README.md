@@ -2,7 +2,7 @@
 
 A local stdio [Model Context Protocol](https://modelcontextprotocol.io) server
 that lets AI assistants watermark and detect images, PDFs and videos with
-[Etchv](https://etchv.com).
+[Etchv](https://etchv.com/?utm_source=mcp-local&utm_medium=readme&utm_campaign=integrations).
 
 ## Requirements
 
@@ -26,6 +26,17 @@ claude mcp add etchv --scope user \
   -e ETCHV_API_KEY="$ETCHV_API_KEY" \
   -e ETCHV_FILES_ROOT="$HOME/etchv-media" \
   -- npx -y @etchv-labs/mcp-server@1
+```
+
+### Editor plugins
+
+This repository is also a Cursor plugin (`.cursor-plugin/plugin.json` with
+`mcp.json`) and a Gemini CLI extension (`gemini-extension.json`). Both run the
+same package and need `ETCHV_API_KEY` and `ETCHV_FILES_ROOT`. Gemini CLI asks
+for them at install; in Cursor, set them under Plugins, then Configure:
+
+```sh
+gemini extensions install https://github.com/etchv-labs/mcp-server
 ```
 
 ### Claude Desktop, Cursor and other `mcpServers` clients
@@ -55,18 +66,51 @@ Then ask the assistant to run `check_api_key` to confirm the connection.
 | Tool | What it does | Key scope |
 | --- | --- | --- |
 | `check_api_key` | Show organization ID, key ID and scopes; no credits | Any valid key |
-| `watermark_media` | Watermark a local file, sync or async; spends credits | `watermarks:embed` |
+| `watermark_media` | Watermark a file, sync or async; spends credits | `watermarks:embed` (`assets:read` for links) |
 | `detect_media` | Detect a watermark, sync or async; uses credits | `watermarks:detect` |
+| `create_upload` | Create an upload session and return its signed upload URL | `watermarks:embed`, or `watermarks:detect` for `detect` |
 | `get_job`, `get_job_result` | Read job status; collect a finished result | Matching embed/detect scope |
 | `watermark_batch` | Watermark up to 100 local files in one batch, each with its own data; spends credits | `watermarks:embed` |
 | `get_batch`, `download_batch` | Follow a batch; save each result or the batch's zip | `watermarks:embed` |
-| `list_assets`, `get_asset`, `download_asset` | List, inspect and download assets | `assets:read` |
+| `list_assets`, `get_asset`, `download_asset` | List, inspect, download or link to assets | `assets:read` |
 | `update_asset` | Rename or replace metadata (version-checked) | `assets:write` |
 | `delete_asset` | Delete an asset | `assets:delete`, owner/admin |
+| `create_link` | Share a source asset so each recipient opens their own watermarked copy; copies spend credits | `links:write` |
+| `list_links`, `get_link` | List links; read one with each recipient's opens and copy | `links:read` |
+| `revoke_link` | Stop new opens and downloads of a link | `links:write` |
 | `list_storage_destinations`, `list_storage_deliveries`, `get_storage_delivery` | Inspect customer storage | `storage:read` |
 | `verify_storage_destination`, `store_asset`, `retry_storage_delivery` | Test a bucket; deliver or retry a result | `storage:write`, owner/admin |
 | `list_webhooks`, `list_webhook_deliveries` | Inspect webhook endpoints and deliveries | `webhooks:read` |
 | `redeliver_webhook` | Resend an existing event | `webhooks:write`, owner/admin |
+
+Every tool has a title and `readOnlyHint`, `destructiveHint`, `idempotentHint`
+and `openWorldHint` annotations.
+
+### Inputs and outputs
+
+`watermark_media` and `detect_media` take the file as exactly one of:
+
+- `input_path`: a local file inside `ETCHV_FILES_ROOT`.
+- `input_url`: a public HTTPS URL. The server downloads it and submits it like
+  a local file. See [Security](#security) for the checks it applies. The file
+  name comes from the `Content-Disposition` header, else the URL path; pass
+  `filename` to set it. Its extension must match `media`.
+- `upload_id`: an `upl_` ID from `create_upload`. A client that can send files
+  itself calls `create_upload` with `kind` (`image`, `document`, `video`, or
+  `detect` to check a delivered file), `filename` and the exact `size` in bytes,
+  PUTs the bytes to the returned `upload.url` without an API key, then passes
+  `upload_id`. An upload is used once and expires after 24 hours.
+- `asset_id`: an existing asset, such as a delivered file to check. The server
+  downloads it and submits it again. `filename` can override its name here too.
+
+A watermarked file is saved to `output_path` when one is given (sync
+`watermark_media`, `get_job_result` and `download_asset`). Without
+`output_path`, these tools return the result's `asset_id` and metadata with
+`download_url` and `download_expires_at`: a link that works without an API key
+for 15 minutes. Anyone with the link can download the file, so share it only
+with the person who needs it. Creating a link needs the `assets:read` scope; if
+it fails, the error names the asset so you can call `download_asset` once the
+key allows it.
 
 Submissions require a stable `idempotency_key`; reuse it when retrying so you
 are not charged twice. Image and PDF uploads are limited to 50 MiB and DOCX,
@@ -108,21 +152,38 @@ fail are refunded. Retrying with the same arguments resumes or returns the
 same batch; if that batch expired unstarted or its results have expired, the
 tool asks for a new `idempotency_key`.
 
+### Hosted mode
+
+The `etchv-mcp` command always runs in local mode. `createServer` in
+`src/server.ts` also takes `mode: "hosted"` for a server that runs remotely and
+has no access to the user's files. In hosted mode no `filesRoot` is needed;
+`input_path`, `output_path` and the other local file arguments are left out of
+every tool schema; `watermark_batch` and `download_batch` are not offered;
+results are returned as download links; and the server instructions and
+`etchv://capabilities` describe that mode.
+
 ## Security
 
 - The API key is read only from `ETCHV_API_KEY`, sent only to the configured
   origin, and never appears in tool arguments, results, errors or logs.
 - File access is confined to `ETCHV_FILES_ROOT`: traversal and symlinks are
   rejected, and existing files are never overwritten.
-- Only HTTPS origins are accepted (HTTP for localhost only), and redirects are
-  never followed.
+- Only HTTPS API origins are accepted (HTTP for localhost only), and API
+  redirects are never followed.
+- `input_url` must be HTTPS without a user name or password. The host must
+  resolve only to public addresses: loopback, private, link-local, carrier-grade
+  NAT, multicast, reserved and documentation ranges are refused, including IPv6
+  forms that embed such an IPv4 address. The connection uses the checked
+  address, at most 3 redirects are followed and each is checked again, the
+  download is capped at the operation's upload limit and times out, and the
+  API key is never sent to the URL.
 - API responses, asset names and metadata are treated as untrusted data, never
   instructions.
 
 ## Links
 
-- Guide: https://etchv.com/docs/mcp
-- API reference: https://etchv.com/docs
+- Guide: https://etchv.com/docs/mcp?utm_source=mcp-local&utm_medium=readme&utm_campaign=integrations
+- API reference: https://etchv.com/docs?utm_source=mcp-local&utm_medium=readme&utm_campaign=integrations
 - Issues: https://github.com/etchv-labs/mcp-server/issues
 - Support: hello@etchv.com
 

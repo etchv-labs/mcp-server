@@ -1,6 +1,6 @@
 {
   "name": "@etchv-labs/mcp-server",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Model Context Protocol (MCP) server for Etchv: invisible watermarking and detection for images, PDFs and videos",
   "keywords": [
     "mcp",
@@ -17,7 +17,7 @@
     "ai-agents",
     "claude"
   ],
-  "homepage": "https://etchv.com/docs/mcp",
+  "homepage": "https://etchv.com/docs/mcp?utm_source=mcp-local&utm_medium=package&utm_campaign=integrations",
   "bugs": {
     "url": "https://github.com/etchv-labs/mcp-server/issues"
   },

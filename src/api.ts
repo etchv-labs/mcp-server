@@ -251,6 +251,24 @@ export async function jsonResponse(
     throw new SafeError("API returned an invalid JSON object.");
   }
 }
+/** A whole response body in memory, refused once it passes `limit` bytes. */
+export async function bytesResponse(response: Response, limit: number) {
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  if (response.body)
+    for await (const chunk of response.body) {
+      size += chunk.length;
+      if (size > limit) {
+        await response.body.cancel().catch(() => {});
+        throw new SafeError(
+          `The file exceeds the ${Math.round(limit / 1024 / 1024)} MiB limit for this operation.`,
+        );
+      }
+      chunks.push(chunk);
+    }
+  if (!size) throw new SafeError("API returned an empty file.");
+  return Buffer.concat(chunks, size);
+}
 export function errorResult(error: unknown, idempotency_key?: string) {
   const message =
     error instanceof SafeError

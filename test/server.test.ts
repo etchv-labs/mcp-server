@@ -20,6 +20,7 @@ const req = "req_" + "a".repeat(64),
   dst = "dst_" + "c".repeat(32),
   wh = "wh_" + "d".repeat(32),
   event = "evt_" + "e".repeat(64),
+  link = "lnk_" + "f".repeat(32),
   delivery = "std_" + "f".repeat(64);
 const secret = "test-key-only";
 test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t) => {
@@ -180,8 +181,10 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
       assert.equal(client.getServerVersion()?.name, "etchv");
       assert.equal(client.getServerVersion()?.version, VERSION);
       const { tools } = await client.listTools();
-      assert.equal(tools.length, 22);
+      assert.equal(tools.length, 27);
       for (const tool of tools) {
+        assert(tool.title && tool.title.length > 3, tool.name);
+        assert.equal(tool.annotations?.title, tool.title, tool.name);
         assert(tool.description && tool.description.length > 20, tool.name);
         assert.equal(tool.inputSchema.type, "object", tool.name);
         assert.equal(tool.annotations?.openWorldHint, true, tool.name);
@@ -199,7 +202,9 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
           "get_asset",
           "get_batch",
           "get_job",
+          "get_link",
           "list_assets",
+          "list_links",
           "list_storage_deliveries",
           "list_storage_destinations",
           "list_webhook_deliveries",
@@ -213,6 +218,7 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
         .sort();
       assert.deepEqual(destructive, [
         "delete_asset",
+        "revoke_link",
         "store_asset",
         "update_asset",
       ]);
@@ -587,6 +593,41 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
       assert(!JSON.stringify(extra).includes(secret));
     },
   );
+  await t.test("traceable links: create with a key, refusals", async () => {
+    const link = {
+      asset_id: asset,
+      name: "📄".repeat(200),
+      recipients: ["alex@example.com"],
+      expires_at: "2026-12-31T23:59:59Z",
+      prepare: "on_open",
+      download_limit: 3,
+      webhook_id: wh,
+      idempotency_key: "board-pack-2026-10",
+    };
+    await call(client, "create_link", link);
+    const { idempotency_key, ...body } = link;
+    assert.equal(requests.at(-1)!.path, "/links");
+    assert.equal(requests.at(-1)!.method, "POST");
+    assert.equal(requests.at(-1)!.idempotency, idempotency_key);
+    assert.deepEqual(requests.at(-1)!.json, body);
+    const before = requests.length;
+    for (const refused of [
+      { ...link, allowed_domains: ["example.com"] },
+      { ...link, recipients: undefined },
+      { ...link, name: "📄".repeat(201) },
+      { ...link, name: "   " },
+      { ...link, idempotency_key: "short" },
+      { ...link, asset_id: "ast_1" },
+      { ...link, download_limit: 0 },
+    ])
+      assert.equal(
+        (await client.callTool({ name: "create_link", arguments: refused }))
+          .isError,
+        true,
+        JSON.stringify(refused).slice(0, 80),
+      );
+    assert.equal(requests.length, before);
+  });
   await t.test(
     "asset pagination, updates, downloads and deletion",
     async () => {
@@ -655,6 +696,9 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
           `/storage/destinations/${dst}/deliveries`,
           "POST",
         ],
+        ["list_links", { limit: 5, before: link }, "/links", "GET"],
+        ["get_link", { link_id: link }, `/links/${link}`, "GET"],
+        ["revoke_link", { link_id: link }, `/links/${link}/revoke`, "POST"],
         ["list_webhooks", {}, "/webhooks", "GET"],
         [
           "list_webhook_deliveries",
@@ -678,6 +722,8 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
           ["list_webhooks", "list_storage_destinations"].includes(tool)
         )
           assert(Array.isArray(value.items));
+        if (tool === "list_links")
+          assert.equal(requests.at(-1)!.query.get("before"), link);
         if (tool === "store_asset")
           assert.deepEqual(requests.at(-1)!.json, {
             asset_id: asset,
@@ -728,7 +774,6 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
         { input_path: "symlink.jpg" },
         { input_path: "input.pdf" },
         { storage_key: "key.jpg" },
-        { mode: "sync" },
         { mode: "sync", webhook_id: wh, output_path: "no.jpg" },
         { output_path: "no.jpg" },
         { data: {} },

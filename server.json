@@ -3,18 +3,18 @@
   "name": "io.github.etchv-labs/mcp-server",
   "title": "Etchv",
   "description": "Invisible watermarking and watermark detection for images, PDFs and videos with Etchv.",
-  "websiteUrl": "https://etchv.com/docs/mcp",
+  "websiteUrl": "https://etchv.com/docs/mcp?utm_source=mcp-local&utm_medium=registry&utm_campaign=integrations",
   "repository": {
     "url": "https://github.com/etchv-labs/mcp-server",
     "source": "github"
   },
-  "version": "1.4.0",
+  "version": "1.5.0",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@etchv-labs/mcp-server",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "runtimeHint": "npx",
       "transport": { "type": "stdio" },
       "environmentVariables": [

@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.5.0
+
+- Traceable links: `create_link` shares a source asset so each recipient
+  opens their own watermarked copy (`recipients` or `allowed_domains`,
+  `expires_at`, `prepare`, `download_limit`, `webhook_id` and a required
+  `idempotency_key`); `list_links` and `get_link` are read-only; `revoke_link`
+  is marked destructive. Scopes `links:write` and `links:read`.
+- `watermark_media` and `detect_media` take the file as exactly one of
+  `input_path`, `input_url`, `upload_id` or `asset_id`. `input_url` is
+  downloaded by the server over HTTPS from public addresses only, following at
+  most 3 redirects, each checked again, within the operation's upload limit.
+  `asset_id` submits an existing asset again. An optional `filename` sets the
+  name of a URL or asset input.
+- New `create_upload` tool: returns an `upload_id` and a signed upload URL, so
+  a client can upload a file itself and pass `upload_id`.
+- Without `output_path`, sync `watermark_media`, `get_job_result` and
+  `download_asset` return `download_url` and `download_expires_at`, a
+  short-lived link to the asset, instead of refusing. Creating a link needs the
+  `assets:read` scope.
+- Every tool has a title, in its definition and in its annotations.
+- `createServer` takes `mode: "hosted"` for a remote server: no files root,
+  no local file arguments, no `watermark_batch` or `download_batch`, and
+  instructions and capabilities that describe that mode. The `etchv-mcp`
+  command stays local.
+
 ## 1.4.0
 
 - `watermark_media` and `watermark_batch` take `active_content` (`keep`, the

@@ -1,0 +1,24 @@
+{
+  "name": "etchv",
+  "version": "1.5.0",
+  "description": "Invisible watermarking and watermark detection for images, PDFs and videos with Etchv.",
+  "mcpServers": {
+    "etchv": {
+      "command": "npx",
+      "args": ["-y", "@etchv-labs/mcp-server@1"]
+    }
+  },
+  "settings": [
+    {
+      "name": "Etchv API key",
+      "description": "An Etchv API key with the scopes your workflow needs.",
+      "envVar": "ETCHV_API_KEY",
+      "sensitive": true
+    },
+    {
+      "name": "Files directory",
+      "description": "Absolute path of an existing directory for input and output files.",
+      "envVar": "ETCHV_FILES_ROOT"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "etchv": {
+      "command": "npx",
+      "args": ["-y", "@etchv-labs/mcp-server@1"],
+      "env": {
+        "ETCHV_API_KEY": "${ETCHV_API_KEY}",
+        "ETCHV_FILES_ROOT": "${ETCHV_FILES_ROOT}"
+      }
+    }
+  }
+}
