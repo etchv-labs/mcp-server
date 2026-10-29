@@ -71,6 +71,21 @@ jobs:
             "$archive"
           tar xzf "$archive" mcp-publisher
           rm -f "$archive" "$archive.sigstore.json"
+      # The registry refuses a version npm does not serve yet, and a version npm
+      # just published can take minutes to appear (the 1.6.0 release failed so).
+      - name: Wait for the npm version
+        run: |
+          set -euo pipefail
+          package="$(jq -r '.packages[0].identifier' server.json)"
+          version="$(jq -r '.packages[0].version' server.json)"
+          url="https://registry.npmjs.org/${package/\//%2F}/${version}"
+          for _ in $(seq 1 30); do
+            if curl --fail --silent --max-time 15 --header "Accept: application/json" \
+              --output /dev/null "$url"; then exit 0; fi
+            sleep 20
+          done
+          echo "::error::${package}@${version} is not on npm after 10 minutes"
+          exit 1
       - name: Publish to the MCP registry
         run: |
           ./mcp-publisher login github-oidc
