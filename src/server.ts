@@ -119,7 +119,8 @@ const requestId = id("req"),
   eventId = id("evt"),
   batchId = id("bat", 32),
   uploadId = id("upl", 32),
-  linkId = id("lnk", 32);
+  linkId = id("lnk", 32),
+  recipientId = id("lrc", 32);
 const path = z
   .string()
   .min(1)
@@ -1387,6 +1388,27 @@ export async function createServer(config: ServerConfig) {
     { link_id: linkId },
     (a, c) => json(`/links/${a.link_id}/revoke`, { method: "POST" }, c),
     { destructive: true, idempotent: true },
+  );
+  tool(
+    "delete_link",
+    "Delete traceable link",
+    "Delete a traceable link with every recipient's opens, downloads and watermarked copy. The link stops at once, as on a revoke; copies not yet queued are canceled and not charged, and a copy already being made finishes and is then deleted. This cannot be undone, and detection will no longer name the link or its recipients. Deleting again also succeeds. Requires links:write and assets:delete, and an owner or admin role.",
+    { link_id: linkId },
+    (a, c) => json(`/links/${a.link_id}`, { method: "DELETE" }, c),
+    { destructive: true, idempotent: true },
+  );
+  tool(
+    "remove_link_recipient",
+    "Remove link recipient",
+    "Delete one recipient of a traceable link with their opens, downloads and watermarked copy, for example when they ask to be erased. Returns the link without them. This cannot be undone, and detection will no longer name the recipient. recipient_id is the recipient's id from get_link. Requires links:write and assets:delete, and an owner or admin role.",
+    { link_id: linkId, recipient_id: recipientId },
+    (a, c) =>
+      json(
+        `/links/${a.link_id}/recipients/${a.recipient_id}`,
+        { method: "DELETE" },
+        c,
+      ),
+    { destructive: true },
   );
   tool(
     "list_storage_destinations",

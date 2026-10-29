@@ -1,6 +1,6 @@
 {
   "name": "etchv",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Invisible watermarking and watermark detection for images, PDFs and videos with Etchv.",
   "author": { "name": "Etchv Labs" },
   "homepage": "https://etchv.com/docs/mcp?utm_source=mcp-local&utm_medium=directory&utm_campaign=integrations",

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.0
+
+- `delete_link` deletes a traceable link with every recipient's opens,
+  downloads and copy; `remove_link_recipient` deletes one recipient's
+  records and copy and returns the link without them. Both are marked destructive, say that the
+  action can't be undone and that detection will no longer name the
+  recipient, and need `links:write` and `assets:delete` with an owner or admin
+  role. `get_link` returns each recipient's `id`.
+
 ## 1.5.0
 
 - Traceable links: `create_link` shares a source asset so each recipient

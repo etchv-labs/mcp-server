@@ -21,6 +21,7 @@ const req = "req_" + "a".repeat(64),
   wh = "wh_" + "d".repeat(32),
   event = "evt_" + "e".repeat(64),
   link = "lnk_" + "f".repeat(32),
+  recipient = "lrc_" + "f".repeat(32),
   delivery = "std_" + "f".repeat(64);
 const secret = "test-key-only";
 test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t) => {
@@ -181,7 +182,7 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
       assert.equal(client.getServerVersion()?.name, "etchv");
       assert.equal(client.getServerVersion()?.version, VERSION);
       const { tools } = await client.listTools();
-      assert.equal(tools.length, 27);
+      assert.equal(tools.length, 29);
       for (const tool of tools) {
         assert(tool.title && tool.title.length > 3, tool.name);
         assert.equal(tool.annotations?.title, tool.title, tool.name);
@@ -218,10 +219,17 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
         .sort();
       assert.deepEqual(destructive, [
         "delete_asset",
+        "delete_link",
+        "remove_link_recipient",
         "revoke_link",
         "store_asset",
         "update_asset",
       ]);
+      for (const name of ["delete_link", "remove_link_recipient"]) {
+        const description = tools.find((x) => x.name === name)?.description;
+        assert.match(description!, /cannot be undone/, name);
+        assert.match(description!, /detection will no longer name/, name);
+      }
       assert.equal(
         tools.find((x) => x.name === "delete_asset")?.annotations
           ?.destructiveHint,
@@ -699,6 +707,13 @@ test("MCP stdio protocol, media routes, assets, storage and webhooks", async (t)
         ["list_links", { limit: 5, before: link }, "/links", "GET"],
         ["get_link", { link_id: link }, `/links/${link}`, "GET"],
         ["revoke_link", { link_id: link }, `/links/${link}/revoke`, "POST"],
+        ["delete_link", { link_id: link }, `/links/${link}`, "DELETE"],
+        [
+          "remove_link_recipient",
+          { link_id: link, recipient_id: recipient },
+          `/links/${link}/recipients/${recipient}`,
+          "DELETE",
+        ],
         ["list_webhooks", {}, "/webhooks", "GET"],
         [
           "list_webhook_deliveries",

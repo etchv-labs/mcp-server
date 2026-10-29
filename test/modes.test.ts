@@ -182,7 +182,7 @@ test("hosted mode needs no files root and hides local files", async (t) => {
   t.after(() => client.close());
   const { tools } = await client.listTools();
   const names = tools.map((x) => x.name);
-  assert.equal(tools.length, 25);
+  assert.equal(tools.length, 27);
   for (const local of ["watermark_batch", "download_batch"])
     assert(!names.includes(local), local);
   for (const kept of ["get_batch", "create_upload", "download_asset"])
@@ -227,7 +227,7 @@ test("every tool has a title and complete annotations in both modes", async (t) 
       filesRoot: mode === "local" ? root : undefined,
     });
     const { tools } = await client.listTools();
-    assert.equal(tools.length, mode === "local" ? 27 : 25);
+    assert.equal(tools.length, mode === "local" ? 29 : 27);
     const titles = new Set<string>();
     for (const tool of tools) {
       assert(tool.title && /^[A-Z][a-z]/.test(tool.title), tool.name);

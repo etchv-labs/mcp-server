@@ -78,6 +78,7 @@ Then ask the assistant to run `check_api_key` to confirm the connection.
 | `create_link` | Share a source asset so each recipient opens their own watermarked copy; copies spend credits | `links:write` |
 | `list_links`, `get_link` | List links; read one with each recipient's opens and copy | `links:read` |
 | `revoke_link` | Stop new opens and downloads of a link | `links:write` |
+| `delete_link`, `remove_link_recipient` | Delete a link, or one recipient, with their opens, downloads and copies; can't be undone | `links:write`, `assets:delete`, owner/admin |
 | `list_storage_destinations`, `list_storage_deliveries`, `get_storage_delivery` | Inspect customer storage | `storage:read` |
 | `verify_storage_destination`, `store_asset`, `retry_storage_delivery` | Test a bucket; deliver or retry a result | `storage:write`, owner/admin |
 | `list_webhooks`, `list_webhook_deliveries` | Inspect webhook endpoints and deliveries | `webhooks:read` |
